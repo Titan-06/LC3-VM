@@ -8,7 +8,7 @@
 __uint16_t memory[MEMORY_MAX];
 __uint16_t registers[8]; // The 8 general purpose registers
 
-__uint16_t PC; // Program Counter ( Contains Which Memory address to fetch next )
+__uint16_t PC; // Program Counter Register ( Contains Which Memory address to fetch next )
 __uint16_t PSR; // Processor status register
 
 enum GENERAL_REGISTERS{
@@ -74,6 +74,7 @@ void op_add(__uint16_t instr)
     }
     setcc(registers[dr]);
 }
+
 void op_and(__uint16_t instr)
 {
     __uint8_t dr = (instr & 0b111000000000) >> 9; // Get the DR out
@@ -89,6 +90,61 @@ void op_and(__uint16_t instr)
     setcc(registers[dr]);
 }
 
+void op_br(__uint16_t instr)
+{
+    __uint8_t conditions = instr >> 9;
+    __uint16_t offset = instr & 0b111111111;
+    if(!conditions){
+        PC = PC + sext(offset,9);
+        return;
+    }
+    if(conditions & PSR){
+        PC = PC + sext(offset,9);
+    }
+}
+
+void op_jmp_ret(__uint16_t instr)
+{
+    __uint8_t baser = (instr & 0b111000000) >> 6;
+    PC = registers[baser];
+}
+
+void op_jsr(__uint16_t instr)
+{
+    registers[R7] = PC;
+    if(instr & 0b100000000000){
+        __uint16_t offset = instr & 0b11111111111;
+        PC = PC + sext(offset,11);
+    }else{
+        __uint8_t baser = (instr & 0b111000000) >> 6;
+        PC = registers[baser];
+    }
+}
+
+void op_ld(__uint16_t instr)
+{
+    __uint8_t dr = (instr & 0b111000000000) >> 9;
+    __uint16_t offset = instr & 0b111111111;
+
+    registers[dr] = memory[PC + sext(offset,9)];
+    setcc(registers[dr]);
+}
+
+void op_ldi(__uint16_t instr)
+{
+    __uint8_t dr = (instr & 0b111000000000) >> 9;
+    __uint16_t offset = instr & 0b111111111;
+
+    __uint16_t target = memory[PC + sext(offset,9)];
+    registers[dr] = memory[target];
+
+    setcc(registers[dr]);
+}
+
+void op_trap(){
+    exit(0);
+}
+/* Necessary Functions */
 
 int load_program(int argc, char * argv[]) // Loads the program returns the size of the program
 {
@@ -141,23 +197,26 @@ int main(int argc, char * argv[])
     {
         __uint16_t instr = memory[PC];
         __uint8_t opcode = instr >> 12;
+
+        PC++; // Move on to the next PC
+
         printf("opcode ran: %u\n",opcode);
         switch (opcode)
         {
             case OP_BR:
-                /* code */
+                op_br(instr);
                 break;
             case OP_ADD:
                 op_add(instr);
                 break;
             case OP_LD:
-                /* code */
+                op_ld(instr);
                 break;
             case OP_ST:
                 /* code */
                 break;
             case OP_JSR:
-                /* code */
+                op_jsr(instr);
                 break;
             case OP_AND:
                 op_and(instr);
@@ -175,27 +234,27 @@ int main(int argc, char * argv[])
                 /* code */
                 break;
             case OP_LDI:
-                /* code */
+                op_ldi(instr);
                 break;
             case OP_STI:
                 /* code */
                 break;
             case OP_RET:
-                /* code */
+                op_jmp_ret(instr);
                 break;
             case OP_LEA:
                 /* code */
                 break;
             case OP_TRAP:
-                /* code */
+                printf("REG 0=%d REG 1=%d REG 2=%d REG 7 = %d\n", registers[0], registers[1], registers[2], registers[R7]);
+                op_trap();
                 break;
 
             default:
                 break;
         }
         printf("CC set to: %d\n",PSR);
-        PC++;
     }
-    printf("REG 0=%d REG 1=%d REG 2=%d\n", registers[0], registers[1], registers[2]);
+    printf("REG 0=%d REG 1=%d REG 2=%d REG 7 = %d\n", registers[0], registers[1], registers[2], registers[R7]);
     return  0;
 }
