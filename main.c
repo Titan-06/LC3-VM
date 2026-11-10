@@ -141,6 +141,41 @@ void op_ldi(__uint16_t instr)
     setcc(registers[dr]);
 }
 
+void op_ldr(__uint16_t instr)
+{
+    __uint8_t dr = (instr & 0b111000000000) >> 9;
+    __uint8_t sr = (instr & 0b111000000) >> 6;
+    __uint8_t offset = (instr & 0b111111);
+
+    registers[dr] = memory[registers[sr] + sext(offset,6)];
+    setcc(registers[dr]);
+}
+
+void op_lea(__uint16_t instr)
+{
+    __uint8_t dr = (instr & 0b111000000000) >> 9;
+    __uint16_t offset = instr & 0b111111111;
+
+    registers[dr] = PC + sext(offset,9);
+}
+
+void op_not(__uint16_t instr)
+{
+    __uint8_t dr = (instr & 0b111000000000) >> 9;
+    __uint8_t sr = (instr & 0b111000000) >> 6;
+
+    registers[dr] = ~registers[sr];
+    setcc(registers[dr]);
+}
+
+void op_st(__uint16_t instr)
+{
+    __uint8_t sr = (instr & 0b111000000000) >> 9;
+    __uint16_t offset = instr & 0b111111111;
+
+    memory[PC + sext(offset,9)] = registers[sr];
+}
+
 void op_trap(){
     exit(0);
 }
@@ -213,7 +248,7 @@ int main(int argc, char * argv[])
                 op_ld(instr);
                 break;
             case OP_ST:
-                /* code */
+                op_st(instr);
                 break;
             case OP_JSR:
                 op_jsr(instr);
@@ -222,7 +257,7 @@ int main(int argc, char * argv[])
                 op_and(instr);
                 break;
             case OP_LDR:
-                /* code */
+                op_ldr(instr);
                 break;
             case OP_STR:
                 /* code */
@@ -231,7 +266,7 @@ int main(int argc, char * argv[])
                 /* code */
                 break;
             case OP_NOT:
-                /* code */
+                op_not(instr);
                 break;
             case OP_LDI:
                 op_ldi(instr);
@@ -243,10 +278,10 @@ int main(int argc, char * argv[])
                 op_jmp_ret(instr);
                 break;
             case OP_LEA:
-                /* code */
+                op_lea(instr);
                 break;
             case OP_TRAP:
-                printf("REG 0=%d REG 1=%d REG 2=%d REG 7 = %d\n", registers[0], registers[1], registers[2], registers[R7]);
+                printf("REG 0=%d REG 1=%d REG 2=%d REG 3 = %d REG 7 = %d\n memoory = %d", registers[0], registers[1], registers[2],registers[3], registers[R7],memory[0x3008]);
                 op_trap();
                 break;
 
@@ -255,6 +290,6 @@ int main(int argc, char * argv[])
         }
         printf("CC set to: %d\n",PSR);
     }
-    printf("REG 0=%d REG 1=%d REG 2=%d REG 7 = %d\n", registers[0], registers[1], registers[2], registers[R7]);
+    printf("REG 0=%d REG 1=%d REG 2=%d REG 3 = %d REG 7 = %d\n", registers[0], registers[1], registers[2],registers[3], registers[R7]);
     return  0;
 }
