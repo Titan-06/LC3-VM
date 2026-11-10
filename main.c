@@ -176,6 +176,26 @@ void op_st(__uint16_t instr)
     memory[PC + sext(offset,9)] = registers[sr];
 }
 
+void op_sti(__uint16_t instr)
+{
+    __uint8_t sr = (instr & 0b111000000000) >> 9;
+    __uint16_t offset = instr & 0b111111111;
+
+    __uint16_t target = memory[PC + sext(offset,9)];
+
+    memory[target] = registers[sr];
+}
+
+void op_str(__uint16_t instr)
+{
+    __uint8_t sr = (instr & 0b111000000000) >> 9;
+    __uint8_t baser = (instr & 0b111000000) >> 6;
+    __uint8_t offset = (instr & 0b111111);
+
+    memory[registers[baser] + sext(offset,6)] = registers[sr];
+
+}
+
 void op_trap(){
     exit(0);
 }
@@ -260,7 +280,7 @@ int main(int argc, char * argv[])
                 op_ldr(instr);
                 break;
             case OP_STR:
-                /* code */
+                op_str(instr);
                 break;
             case OP_RTI:
                 /* code */
@@ -272,7 +292,7 @@ int main(int argc, char * argv[])
                 op_ldi(instr);
                 break;
             case OP_STI:
-                /* code */
+                op_sti(instr);
                 break;
             case OP_RET:
                 op_jmp_ret(instr);
@@ -281,7 +301,7 @@ int main(int argc, char * argv[])
                 op_lea(instr);
                 break;
             case OP_TRAP:
-                printf("REG 0=%d REG 1=%d REG 2=%d REG 3 = %d REG 7 = %d\n memoory = %d", registers[0], registers[1], registers[2],registers[3], registers[R7],memory[0x3008]);
+                printf("REG 1=%d REG 2=%d REG 3 = %d memory = %d memoory = %d", registers[1], registers[2],registers[3], memory[0x300A],memory[0x300B]);
                 op_trap();
                 break;
 
