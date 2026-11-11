@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <termios.h>
+#include <unistd.h>
 
 #define MEMORY_MAX ( 1 << 16 )
 #define START_ADDRESS 0x3000
@@ -207,6 +208,13 @@ void op_str(__uint16_t instr)
 
 // Handling Trap routines
 
+void trap_getc()
+{
+    __uint8_t character = getc(stdin);
+    registers[R0] = 0 | character;
+    setcc(registers[R0]);
+}
+
 void trap_out()
 {
     __uint16_t character = registers[R0];
@@ -225,6 +233,18 @@ void trap_puts()
         putc((char)memory[c],stdout);
         c++;
     }
+    fflush(stdout);
+}
+
+void trap_in()
+{
+    printf("Enter a character: ");
+    __uint8_t character = getc(stdin);
+
+    registers[R0] = 0 | character;
+    putc(character,stdout);
+
+    setcc(registers[R0]);
     fflush(stdout);
 }
 
@@ -257,7 +277,7 @@ __uint8_t op_trap(__uint16_t instr){
     switch (trap_code)
     {
     case TRAP_GETC:
-        /* code */
+        trap_getc();
         break;
     case TRAP_OUT:
         trap_out();
@@ -266,12 +286,13 @@ __uint8_t op_trap(__uint16_t instr){
         trap_puts();
         break;
     case TRAP_IN:
-        /* code */
+        trap_in();
         break;
     case TRAP_PUTSP:
         trap_putsp();
         break;
     case TRAP_HALT:
+        puts("HALT");
         return 1;
     }
     return 0;
@@ -314,6 +335,17 @@ int load_program(int argc, char * argv[]) // Loads the program returns the size 
 
 int main(int argc, char * argv[])
 {
+
+    // SETUP -- to get input directly and not make it echo in terminal
+    struct termios oldt,newt;
+    tcgetattr(STDIN_FILENO,&oldt);
+    newt = oldt;
+
+    newt.c_lflag &= ~(ICANON | ECHO);
+
+    tcsetattr(STDIN_FILENO,TCSANOW,&newt);
+
+    // Program is LOADED
     u_int16_t program_size = load_program(argc,argv);
     // Load the program into memory 
     if(!program_size)
@@ -322,6 +354,8 @@ int main(int argc, char * argv[])
         exit(1);
     }
     printf("Instructions loaded in memory: %u\n",program_size);
+
+
 
     PSR = 1 << 1; // Initially set to zero condition code and supervisor mode 
     PC = START_ADDRESS; // Starting position of memory for the user programs
@@ -390,6 +424,10 @@ int main(int argc, char * argv[])
         }
         printf("CC set to: %d\n",PSR);
     }
-    printf("REG 1=%d REG 2=%d REG 3 = %d memory = %d memoory = %d \n", registers[1], registers[2],registers[3], memory[0x300A],memory[0x300B]);
+    printf("REG 0 = %d REG 1=%d REG 2=%d REG 3 = %d memory = %d memoory = %d \n",registers[0], registers[1], registers[2],registers[3], memory[0x300A],memory[0x300B]);
+
+    // Restore the older settings
+    tcsetattr(STDIN_FILENO,TCSANOW,&oldt);
+
     return  0;
 }
