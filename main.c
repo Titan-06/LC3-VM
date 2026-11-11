@@ -41,6 +41,15 @@ enum OPCODES{ // 15 OPCODES in LC 3 and One reserved code
     OP_TRAP
 };
 
+enum TRAPS{
+    TRAP_GETC = 0x20,
+    TRAP_OUT,
+    TRAP_PUTS,
+    TRAP_IN,
+    TRAP_PUTSP,
+    TRAP_HALT
+};
+
 // Op code helper functions
 __uint16_t sext(__uint16_t num,__uint8_t sig_dig)
 {
@@ -196,8 +205,45 @@ void op_str(__uint16_t instr)
 
 }
 
-void op_trap(){
-    exit(0);
+// Handling Trap routines
+void trap_puts()
+{
+    __uint16_t c = registers[R0];
+
+    while(memory[c])
+    {
+        putc((char)memory[c],stdout);
+        c++;
+    }
+    fflush(stdout);
+}
+
+__uint8_t op_trap(__uint16_t instr){
+    
+    registers[R7] = PC;
+    __uint16_t trap_code = (instr & 0b11111111);
+    // Handle every trap code
+    switch (trap_code)
+    {
+    case TRAP_GETC:
+        /* code */
+        break;
+    case TRAP_OUT:
+        /* code */
+        break;
+    case TRAP_PUTS:
+        trap_puts();
+        break;
+    case TRAP_IN:
+        /* code */
+        break;
+    case TRAP_PUTSP:
+        /* code */
+        break;
+    case TRAP_HALT:
+        return 1;
+    }
+    return 0;
 }
 /* Necessary Functions */
 
@@ -248,7 +294,10 @@ int main(int argc, char * argv[])
 
     PSR = 1 << 1; // Initially set to zero condition code and supervisor mode 
     PC = START_ADDRESS; // Starting position of memory for the user programs
-    while(PC != START_ADDRESS + program_size)
+
+    __uint16_t running = 1;
+
+    while(running)
     {
         __uint16_t instr = memory[PC];
         __uint8_t opcode = instr >> 12;
@@ -301,8 +350,8 @@ int main(int argc, char * argv[])
                 op_lea(instr);
                 break;
             case OP_TRAP:
-                printf("REG 1=%d REG 2=%d REG 3 = %d memory = %d memoory = %d", registers[1], registers[2],registers[3], memory[0x300A],memory[0x300B]);
-                op_trap();
+                __uint8_t result = op_trap(instr);
+                if(result) running = 0;
                 break;
 
             default:
@@ -310,6 +359,6 @@ int main(int argc, char * argv[])
         }
         printf("CC set to: %d\n",PSR);
     }
-    printf("REG 0=%d REG 1=%d REG 2=%d REG 3 = %d REG 7 = %d\n", registers[0], registers[1], registers[2],registers[3], registers[R7]);
+    printf("REG 1=%d REG 2=%d REG 3 = %d memory = %d memoory = %d \n", registers[1], registers[2],registers[3], memory[0x300A],memory[0x300B]);
     return  0;
 }
