@@ -206,6 +206,16 @@ void op_str(__uint16_t instr)
 }
 
 // Handling Trap routines
+
+void trap_out()
+{
+    __uint16_t character = registers[R0];
+
+    putc(character,stdout);
+
+    fflush(stdout);
+}
+
 void trap_puts()
 {
     __uint16_t c = registers[R0];
@@ -213,6 +223,27 @@ void trap_puts()
     while(memory[c])
     {
         putc((char)memory[c],stdout);
+        c++;
+    }
+    fflush(stdout);
+}
+
+void trap_putsp()
+{
+    __uint16_t c = registers[R0];
+
+    __uint8_t till_8c; // The 0-7 bit of the memory location
+    __uint8_t till_16c; // The 8-15 bit of the memory location
+    while(1)
+    {
+        till_8c = memory[c] & 0b11111111;
+        if(!till_8c) break;
+        putc(till_8c,stdout);
+
+        till_16c = memory[c] >> 8;
+        if(!till_16c) break;
+        putc(till_16c,stdout);
+
         c++;
     }
     fflush(stdout);
@@ -229,7 +260,7 @@ __uint8_t op_trap(__uint16_t instr){
         /* code */
         break;
     case TRAP_OUT:
-        /* code */
+        trap_out();
         break;
     case TRAP_PUTS:
         trap_puts();
@@ -238,7 +269,7 @@ __uint8_t op_trap(__uint16_t instr){
         /* code */
         break;
     case TRAP_PUTSP:
-        /* code */
+        trap_putsp();
         break;
     case TRAP_HALT:
         return 1;
